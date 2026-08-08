@@ -1,19 +1,40 @@
 {
   "name": "lukr",
   "version": "1.0.0",
-  "description": "",
+  "private": true,
+  "description": "A small, versioned HTML plan viewer for coding agents.",
   "main": "src/index.ts",
   "scripts": {
-    "start": "nodemon --exec tsx ./src/index.ts"
+    "dev": "nodemon --exec tsx ./src/index.ts",
+    "start": "pnpm run dev",
+    "build": "tsc src/index.ts --outDir dist --rootDir src --module NodeNext --moduleResolution NodeNext --target ES2023 --esModuleInterop --skipLibCheck --noEmitOnError",
+    "start:prod": "node dist/index.js",
+    "typecheck": "tsc src/index.ts --module NodeNext --moduleResolution NodeNext --target ES2023 --esModuleInterop --skipLibCheck --noEmit",
+    "test": "node --test"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "coding-agents",
+    "developer-tools",
+    "html",
+    "plans",
+    "self-hosted",
+    "versioning"
+  ],
   "license": "ISC",
+  "engines": {
+    "node": ">=24.19.0"
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
   "packageManager": "pnpm@11.20.0+sha512.9a6f330a95b66446ea088faf1521405a8a01f07fde7124cc9958dfed52d4bb436737e65b08f85f37b46fcba375092558ac51262b816844b22f63406ed166bfee",
   "dependencies": {
+    "express": "^5.2.1"
+  },
+  "devDependencies": {
     "@types/express": "^5.0.6",
     "@types/node": "^26.2.0",
-    "express": "^5.2.1",
     "nodemon": "^3.1.14",
     "tsx": "^4.20.3",
     "typescript": "^7.0.2"
