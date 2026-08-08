@@ -4,20 +4,11 @@ WORKDIR /app
 
 RUN npm install --global pnpm@11.20.0
 
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json ./
 RUN pnpm install --frozen-lockfile
 
 COPY src ./src
-RUN pnpm exec tsc \
-    src/index.ts \
-    --outDir dist \
-    --rootDir src \
-    --module NodeNext \
-    --moduleResolution NodeNext \
-    --target ES2023 \
-    --esModuleInterop \
-    --skipLibCheck \
-    --noEmitOnError
+RUN pnpm run build
 
 RUN pnpm prune --prod
 

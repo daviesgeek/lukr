@@ -7,9 +7,9 @@
   "scripts": {
     "dev": "nodemon --exec tsx ./src/index.ts",
     "start": "pnpm run dev",
-    "build": "tsc src/index.ts --outDir dist --rootDir src --module NodeNext --moduleResolution NodeNext --target ES2023 --esModuleInterop --skipLibCheck --noEmitOnError",
+    "build": "tsc",
     "start:prod": "node dist/index.js",
-    "typecheck": "tsc src/index.ts --module NodeNext --moduleResolution NodeNext --target ES2023 --esModuleInterop --skipLibCheck --noEmit",
+    "typecheck": "tsc --noEmit",
     "test": "node --test"
   },
   "keywords": [
