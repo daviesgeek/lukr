@@ -22,3 +22,13 @@ Rules:
 - Return a concise link like `${base}/plans/${id}` when the save succeeds.
 - If the server is unreachable, say that plainly; do not invent success.
 - In restricted environments, do not stall. Provide a ready-to-run `curl` or `python` command and the exact URL to open.
+
+## Installation
+
+Copy the canonical skill directory into the agent's skills directory, for example:
+
+```sh
+cp -R .agents/skills/lukr ~/.agents/skills/lukr
+```
+
+Use the equivalent agent-specific skills path when installing for another agent.
