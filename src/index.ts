@@ -1,8 +1,29 @@
 import { DatabaseSync, SQLOutputValue } from "node:sqlite";
 import { randomUUID } from "node:crypto";
+import { dirname } from "node:path";
+import { mkdirSync } from "node:fs";
 import express from "express";
 
-const db = new DatabaseSync("app.db");
+const databasePath = process.env.LUKR_DB_PATH?.trim() || "app.db";
+
+if (databasePath !== ":memory:") {
+  mkdirSync(dirname(databasePath), { recursive: true });
+}
+
+const db = new DatabaseSync(databasePath);
+
+db.exec(`
+  PRAGMA journal_mode = WAL;
+  PRAGMA busy_timeout = 5000;
+  CREATE TABLE IF NOT EXISTS plans (
+    id TEXT NOT NULL,
+    name TEXT NOT NULL DEFAULT '',
+    version INTEGER NOT NULL,
+    html TEXT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id, version)
+  )
+`);
 
 interface Plan {
   id: string;
@@ -33,17 +54,6 @@ const isPlan = (value: unknown): value is Plan => {
     typeof plan.created_at === "string"
   );
 };
-
-db.exec(`
-  CREATE TABLE IF NOT EXISTS plans (
-    id TEXT NOT NULL,
-    name TEXT NOT NULL DEFAULT '',
-    version INTEGER NOT NULL,
-    html TEXT NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (id, version)
-  )
-`);
 
 const app = express();
 app.use(express.json());
@@ -129,9 +139,16 @@ app.post("/plans", (req, res) => {
   const name =
     req.body && typeof req.body.name === "string" ? req.body.name.trim() : "";
 
-  db.prepare(
-    "INSERT INTO plans (id, name, version, html) VALUES (?, ?, ?, ?)",
-  ).run(UUID, name, 1, html);
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    db.prepare(
+      "INSERT INTO plans (id, name, version, html) VALUES (?, ?, ?, ?)",
+    ).run(UUID, name, 1, html);
+    db.exec("COMMIT");
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
 
   res.status(201).json({ id: UUID, version: 1, name });
 });
@@ -145,28 +162,40 @@ app.post("/plans/:planId", (req, res) => {
     return res.status(400).json({ error: "Missing html" });
   }
 
-  const latestPlan = db
-    .prepare("SELECT * FROM plans WHERE id = ? ORDER BY version DESC LIMIT 1")
-    .get(planId);
+  db.exec("BEGIN IMMEDIATE");
+  let newVersion: number;
+  let name: string;
+  try {
+    const latestPlan = db
+      .prepare("SELECT * FROM plans WHERE id = ? ORDER BY version DESC LIMIT 1")
+      .get(planId) as { version?: unknown; name?: unknown } | undefined;
 
-  if (!latestPlan) {
-    return res.status(404).json({ error: "Plan not found" });
+    if (!latestPlan) {
+      db.exec("ROLLBACK");
+      return res.status(404).json({ error: "Plan not found" });
+    }
+
+    if (typeof latestPlan.version !== "number") {
+      db.exec("ROLLBACK");
+      return res.status(500).json({ error: "Invalid plan version" });
+    }
+
+    newVersion = latestPlan.version + 1;
+    name =
+      req.body && typeof req.body.name === "string"
+        ? req.body.name.trim()
+        : typeof latestPlan.name === "string"
+          ? latestPlan.name
+          : "";
+
+    db.prepare(
+      "INSERT INTO plans (id, name, version, html) VALUES (?, ?, ?, ?)",
+    ).run(planId, name, newVersion, html);
+    db.exec("COMMIT");
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
   }
-
-  const latestVersion = latestPlan.version;
-  if (typeof latestVersion !== "number") {
-    return res.status(500).json({ error: "Invalid plan version" });
-  }
-
-  const newVersion = latestVersion + 1;
-  const name =
-    req.body && typeof req.body.name === "string"
-      ? req.body.name.trim()
-      : latestPlan.name;
-
-  db.prepare(
-    "INSERT INTO plans (id, name, version, html) VALUES (?, ?, ?, ?)",
-  ).run(planId, name, newVersion, html);
 
   res.status(201).json({ id: planId, version: newVersion, name });
 });
@@ -206,9 +235,24 @@ app.get("/plans/:planId/:version", (req, res) => {
 
 const PORT = process.env.PORT || 3007;
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
+
+let shuttingDown = false;
+const shutdown = (signal: string): void => {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`Received ${signal}; shutting down gracefully.`);
+  server.close(() => {
+    db.close();
+    console.log("SQLite database closed.");
+    process.exit(0);
+  });
+};
+
+process.once("SIGINT", () => shutdown("SIGINT"));
+process.once("SIGTERM", () => shutdown("SIGTERM"));
 
 const wrapPlanWithVersionSwitcher = (plan: Plan): string => {
   const versions = db
