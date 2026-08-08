@@ -1,0 +1,15 @@
+.git
+.gitignore
+.DS_Store
+node_modules
+dist
+app.db
+*.db-shm
+*.db-wal
+testing
+.agents
+.claude
+README.md
+Dockerfile
+compose.yml
+docker-compose.yml

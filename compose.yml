@@ -1,0 +1,20 @@
+services:
+  lukr:
+    build:
+      context: .
+    ports:
+      - "${PORT:-3007}:${PORT:-3007}"
+    environment:
+      PORT: "${PORT:-3007}"
+    volumes:
+      - lukr-data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:' + (process.env.PORT || 3007) + '/').then((r) => { if (!r.ok) process.exit(1) }).catch(() => process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+
+volumes:
+  lukr-data:
