@@ -179,3 +179,5 @@ dist
 # Project specific
 
 app.db
+*.db-shm
+*.db-wal
