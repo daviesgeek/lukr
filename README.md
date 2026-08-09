@@ -1,4 +1,4 @@
-# Lukr
+# Lukr ("looker")
 
 A simple, versioned HTML plan viewer for your agent. Intentionally small, built with careful use of AI.
 
