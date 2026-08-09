@@ -16,7 +16,13 @@ As I find more features worth building, I'll probably use AI more. The same prin
 
 ## How?
 
-Install dependencies with `pnpm install`, then start the server with `pnpm start`. The server runs on port `3007` by default, so you can open [http://localhost:3007](http://localhost:3007) to check that it's running.
+Run the published Docker image:
+
+```bash
+docker run -d --name lukr -p 3007:3007 -v lukr-data:/app/data ghcr.io/daviesgeek/lukr:latest
+```
+
+To run from source instead, install dependencies with `pnpm install`, then start the server with `pnpm start`. The server runs on port `3007` by default, so you can open [http://localhost:3007](http://localhost:3007) to check that it's running.
 
 Install the `lukr` skill in your agent's skills directory. The skill tells the agent how to save a plan and how to retrieve it later. It reads a `.lukr.json` file from the workspace to find the Lukr server, for example:
 
