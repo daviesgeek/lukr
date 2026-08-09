@@ -24,7 +24,19 @@ docker run -d --name lukr -p 3007:3007 -v lukr-data:/app/data ghcr.io/daviesgeek
 
 To run from source instead, install dependencies with `pnpm install`, then start the server with `pnpm start`. The server runs on port `3007` by default, so you can open [http://localhost:3007](http://localhost:3007) to check that it's running.
 
-Install the `lukr` skill in your agent's skills directory. The skill tells the agent how to save a plan and how to retrieve it later. It reads a `.lukr.json` file from the workspace to find the Lukr server, for example:
+Install the `lukr` skill in your agent's skills directory by copying the canonical skill directory into your agent's skills directory, for example:
+
+```bash
+cp -R ./skills/lukr ~/.agents/skills/lukr
+```
+
+Or for Claude Code:
+
+```bash
+cp -R ./skills/lukr ~/.claude/skills/lukr
+```
+
+The skill tells the agent how to save a plan and how to retrieve it later. It reads a `.lukr.json` file from the workspace to find the Lukr server, for example:
 
 ```json
 {
