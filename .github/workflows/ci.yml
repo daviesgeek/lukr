@@ -46,5 +46,8 @@ jobs:
       - name: Validate package contents
         run: pnpm pack --dry-run
 
+      - name: Validate Docker image build
+        run: docker build --file Dockerfile --tag lukr:ci .
+
       - name: Audit dependencies
         run: pnpm audit --audit-level high
