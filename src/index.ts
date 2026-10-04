@@ -37,6 +37,7 @@ interface PlanListRow {
   id: string;
   name: string;
   versions: string;
+  updated_at: string;
 }
 
 const isPlan = (value: unknown): value is Plan => {
@@ -85,6 +86,13 @@ app.get("/plans", (_req, res) => {
             ORDER BY latest.version DESC
             LIMIT 1
           ) AS name,
+          (
+            SELECT latest.created_at
+            FROM plans latest
+            WHERE latest.id = grouped.id
+            ORDER BY latest.created_at DESC, latest.version DESC
+            LIMIT 1
+          ) AS updated_at,
           GROUP_CONCAT(grouped.version, ',') AS versions
         FROM (
           SELECT id, version
@@ -92,7 +100,7 @@ app.get("/plans", (_req, res) => {
           ORDER BY id ASC, version DESC
         ) grouped
         GROUP BY grouped.id
-        ORDER BY grouped.id ASC
+         ORDER BY updated_at DESC, grouped.id ASC
       `,
     )
     .all() as unknown as PlanListRow[];
