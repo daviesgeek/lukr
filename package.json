@@ -1,6 +1,6 @@
 {
   "name": "lukr",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "A small, versioned HTML plan viewer for coding agents.",
   "main": "src/index.ts",
