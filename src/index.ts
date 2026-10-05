@@ -4,6 +4,8 @@ import { dirname } from "node:path";
 import { mkdirSync } from "node:fs";
 import express from "express";
 import { MermaidRenderError, renderPlanDiagrams } from "./mermaid.js";
+import { libraryPage, PAGE_SIZE, renderLibrary, type LibraryPlan, type PlanHistory } from "./library.js";
+import { renderPublishingText } from "./publishing.js";
 
 const databasePath = process.env.LUKR_DB_PATH?.trim() || "app.db";
 
@@ -34,13 +36,6 @@ interface Plan {
   created_at: string;
 }
 
-interface PlanListRow {
-  id: string;
-  name: string;
-  versions: string;
-  updated_at: string;
-}
-
 const isPlan = (value: unknown): value is Plan => {
   if (!value || typeof value !== "object") {
     return false;
@@ -60,82 +55,35 @@ const isPlan = (value: unknown): value is Plan => {
 const app = express();
 app.use(express.json());
 
-app.get("/", (_req, res) => {
-  const message = [
-    "This is lukr, a simple HTML plan viewer for your agent.",
-    "",
-    `Send a POST request to /plans with {"html": "...", "name": "..."} to create a new plan.`,
-    "You'll receive a 201 response, a UUID, and a version if the plan was successfully registered. You can then view your plan at /plans/:planId, or a specific version at /plans/:planId/:version.",
-    "",
-    "The plan is versioned, so if you send a new plan with the same UUID, it will create a new version of the plan.",
-    "That's it! Enjoy :)",
-  ].join("<br />");
-
-  res.send(message);
+app.get(["/", "/plans"], (req, res) => {
+  try {
+    const { total } = db.prepare("SELECT COUNT(DISTINCT id) AS total FROM plans").get() as { total: number };
+    const page = libraryPage(req.query.page, total);
+    const rows = db.prepare(`
+      SELECT grouped.id, latest.name, grouped.version, grouped.updated_at
+      FROM (SELECT id, MAX(version) AS version, MAX(created_at) AS updated_at FROM plans GROUP BY id) grouped
+      JOIN plans latest ON latest.id = grouped.id AND latest.version = grouped.version
+      ORDER BY grouped.updated_at DESC, grouped.id ASC
+      LIMIT ? OFFSET ?
+    `).all(PAGE_SIZE, (page - 1) * PAGE_SIZE) as unknown as Omit<LibraryPlan, "history">[];
+    const histories = new Map<string, PlanHistory[]>();
+    if (rows.length) {
+      const entries = db.prepare(`SELECT id, version, created_at FROM plans WHERE id IN (${rows.map(() => "?").join(",")}) ORDER BY id ASC, version DESC`)
+        .all(...rows.map(row => row.id)) as unknown as (PlanHistory & { id: string })[];
+      for (const entry of entries) {
+        const history = histories.get(entry.id) ?? [];
+        history.push(entry);
+        histories.set(entry.id, history);
+      }
+    }
+    res.type("html").send(renderLibrary(rows.map(row => ({ ...row, history: histories.get(row.id) ?? [] })), total, page));
+  } catch (error) {
+    console.error("Couldn't load plans", error);
+    res.status(500).type("html").send(renderLibrary([], 0, 1, true));
+  }
 });
 
-app.get("/plans", (_req, res) => {
-  const planRows = db
-    .prepare(
-      `
-        SELECT
-          grouped.id,
-          (
-            SELECT latest.name
-            FROM plans latest
-            WHERE latest.id = grouped.id
-            ORDER BY latest.version DESC
-            LIMIT 1
-          ) AS name,
-          (
-            SELECT latest.created_at
-            FROM plans latest
-            WHERE latest.id = grouped.id
-            ORDER BY latest.created_at DESC, latest.version DESC
-            LIMIT 1
-          ) AS updated_at,
-          GROUP_CONCAT(grouped.version, ',') AS versions
-        FROM (
-          SELECT id, version
-          FROM plans
-          ORDER BY id ASC, version DESC
-        ) grouped
-        GROUP BY grouped.id
-         ORDER BY updated_at DESC, grouped.id ASC
-      `,
-    )
-    .all() as unknown as PlanListRow[];
-
-  const planItems = planRows
-    .map((plan) => {
-      const versionItems = plan.versions
-        .split(",")
-        .map((version) => Number.parseInt(version, 10))
-        .filter((version) => Number.isInteger(version) && version > 0)
-        .map(
-          (version) =>
-            `<li><a href="/plans/${plan.id}/${version}">Version ${version}</a></li>`,
-        )
-        .join("");
-
-      return `
-        <li>
-          <a href="/plans/${plan.id}">${plan.name} - ${plan.id}</a>
-          <ul>${versionItems}</ul>
-        </li>
-      `;
-    })
-    .join("");
-
-  const html = `
-    <h1>Plans</h1>
-    <ul>
-      ${planItems || "<li>No plans found</li>"}
-    </ul>
-  `;
-
-  res.type("html").send(html);
-});
+app.get("/llms.txt", (_req, res) => res.type("text/plain").send(renderPublishingText()));
 
 app.post("/plans", async (req, res) => {
   let html =
@@ -298,17 +246,21 @@ const wrapPlanWithVersionSwitcher = (plan: Plan): string => {
     .join("");
 
   const switcherHTML = `
-    <div style="margin-bottom: 20px;">
+      <a class="control" href="/">All plans</a>
       <label for="version-select">Select Version:</label>
       <select id="version-select" onchange="switchVersion(this.value)">
         ${versionOptions}
       </select>
-    </div>
     <script>
       function switchVersion(version) {
         window.location.href = '/plans/${plan.id}/' + version;
       }
     </script>
   `;
-  return switcherHTML + plan.html;
+  const marker = "<!-- LUKR_VERSION_SELECTOR -->";
+  if (plan.html.includes(marker)) return plan.html.replace(marker, switcherHTML);
+  const fallback = `<nav aria-label="Plan navigation" style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:16px;">${switcherHTML}</nav>`;
+  // Keep full older documents valid where possible, without changing stored HTML.
+  if (/<body\b[^>]*>/i.test(plan.html)) return plan.html.replace(/<body\b[^>]*>/i, body => body + fallback);
+  return fallback + plan.html;
 };
