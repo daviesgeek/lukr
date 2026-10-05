@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { dirname } from "node:path";
 import { mkdirSync } from "node:fs";
 import express from "express";
+import { MermaidRenderError, renderPlanDiagrams } from "./mermaid.js";
 
 const databasePath = process.env.LUKR_DB_PATH?.trim() || "app.db";
 
@@ -136,11 +137,20 @@ app.get("/plans", (_req, res) => {
   res.type("html").send(html);
 });
 
-app.post("/plans", (req, res) => {
-  const html =
+app.post("/plans", async (req, res) => {
+  let html =
     req.body && typeof req.body.html === "string" ? req.body.html.trim() : "";
   if (typeof html !== "string" || html.length === 0) {
     return res.status(400).json({ error: "Missing html" });
+  }
+
+  try {
+    html = await renderPlanDiagrams(html);
+  } catch (error) {
+    if (error instanceof MermaidRenderError) {
+      return res.status(error.status).json({ error: "Mermaid rendering failed", diagram: error.diagram, detail: error.message });
+    }
+    throw error;
   }
 
   const UUID = randomUUID();
@@ -161,13 +171,26 @@ app.post("/plans", (req, res) => {
   res.status(201).json({ id: UUID, version: 1, name });
 });
 
-app.post("/plans/:planId", (req, res) => {
+app.post("/plans/:planId", async (req, res) => {
   const { planId } = req.params;
 
-  const html =
+  let html =
     req.body && typeof req.body.html === "string" ? req.body.html.trim() : "";
   if (typeof html !== "string" || html.length === 0) {
     return res.status(400).json({ error: "Missing html" });
+  }
+
+  if (!db.prepare("SELECT 1 FROM plans WHERE id = ?").get(planId)) {
+    return res.status(404).json({ error: "Plan not found" });
+  }
+
+  try {
+    html = await renderPlanDiagrams(html);
+  } catch (error) {
+    if (error instanceof MermaidRenderError) {
+      return res.status(error.status).json({ error: "Mermaid rendering failed", diagram: error.diagram, detail: error.message });
+    }
+    throw error;
   }
 
   db.exec("BEGIN IMMEDIATE");

@@ -10,7 +10,7 @@
     "build": "tsc",
     "start:prod": "node dist/index.js",
     "typecheck": "tsc --noEmit",
-    "test": "node --test"
+    "test": "node --import tsx --test tests/*.test.ts"
   },
   "keywords": [
     "coding-agents",
@@ -26,11 +26,16 @@
   },
   "files": [
     "src",
-    "README.md"
+    "README.md",
+    ".puppeteerrc.cjs",
+    "skills/lukr-plan/assets/semantic-colors.json"
   ],
   "packageManager": "pnpm@11.20.0+sha512.9a6f330a95b66446ea088faf1521405a8a01f07fde7124cc9958dfed52d4bb436737e65b08f85f37b46fcba375092558ac51262b816844b22f63406ed166bfee",
   "dependencies": {
-    "express": "^5.2.1"
+    "@mermaid-js/mermaid-cli": "12.0.0",
+    "cheerio": "1.2.0",
+    "express": "^5.2.1",
+    "puppeteer": "^25.12.0"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",

@@ -39,6 +39,8 @@ jobs:
 
       - name: Test
         run: pnpm test
+        env:
+          PUPPETEER_NO_SANDBOX: "true"
 
       - name: Build
         run: pnpm run build
