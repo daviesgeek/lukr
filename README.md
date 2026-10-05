@@ -68,11 +68,11 @@ Plans are JSON with a required `html` string and an optional `name`.
 | ------ | ------------------------- | --------------------------------- |
 | `POST` | `/plans`                  | Create a plan at version 1        |
 | `POST` | `/plans/:planId`          | Create the next version of a plan |
-| `GET`  | `/plans`                  | List all plans and versions       |
+| `GET`  | `/` or `/plans`           | Browse the plan library           |
 | `GET`  | `/plans/:planId`          | View the latest version           |
 | `GET`  | `/plans/:planId/:version` | View a specific version           |
 
-Both `POST` routes accept `{ "html": "...", "name": "..." }` and return the plan ID, version, and name. Plan pages include a version selector.
+Both `POST` routes accept `{ "html": "...", "name": "..." }` and return the plan ID, version, and name. The plan library shows 25 plans per page, with previous/next navigation via the optional `?page=N` query parameter. Each entry shows its latest version and can expand to show its saved version history. Plan pages include a version selector.
 
 ## Mermaid diagrams
 
