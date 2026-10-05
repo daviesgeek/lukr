@@ -1,0 +1,37 @@
+{
+  "frontend": {
+    "label": "Frontend",
+    "light": { "background": "#eff6ff", "border": "#2563eb", "text": "#1e40af" },
+    "dark": { "background": "#17243a", "border": "#60a5fa", "text": "#bfdbfe" }
+  },
+  "backend": {
+    "label": "Backend",
+    "light": { "background": "#f0fdf4", "border": "#15803d", "text": "#166534" },
+    "dark": { "background": "#172d21", "border": "#4ade80", "text": "#bbf7d0" }
+  },
+  "database": {
+    "label": "Database / storage",
+    "light": { "background": "#faf5ff", "border": "#9333ea", "text": "#6b21a8" },
+    "dark": { "background": "#2b203a", "border": "#c084fc", "text": "#e9d5ff" }
+  },
+  "cloud": {
+    "label": "Cloud / infrastructure",
+    "light": { "background": "#fff7ed", "border": "#c2410c", "text": "#9a3412" },
+    "dark": { "background": "#35251b", "border": "#fb923c", "text": "#fed7aa" }
+  },
+  "security": {
+    "label": "Security",
+    "light": { "background": "#fef2f2", "border": "#dc2626", "text": "#991b1b" },
+    "dark": { "background": "#371d22", "border": "#f87171", "text": "#fecaca" }
+  },
+  "messaging": {
+    "label": "Messaging / events",
+    "light": { "background": "#f0fdfa", "border": "#0f766e", "text": "#115e59" },
+    "dark": { "background": "#172d2c", "border": "#2dd4bf", "text": "#99f6e4" }
+  },
+  "external": {
+    "label": "External actors",
+    "light": { "background": "#f3f4f6", "border": "#6b7280", "text": "#374151" },
+    "dark": { "background": "#26282d", "border": "#9ca3af", "text": "#e5e7eb" }
+  }
+}

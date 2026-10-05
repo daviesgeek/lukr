@@ -1,0 +1,697 @@
+<!doctype html>
+<html lang="en" data-theme="system">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Implementation Plan</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: oklch(0.985 0.005 80);
+      --surface: oklch(0.955 0.007 80);
+      --surface-strong: oklch(0.92 0.009 80);
+      --text: oklch(0.25 0.01 80);
+      --muted: oklch(0.49 0.012 80);
+      --border: oklch(0.85 0.012 80);
+      --accent: oklch(0.46 0.10 65);
+      --accent-soft: oklch(0.95 0.03 80);
+      --warning-bg: oklch(0.96 0.04 85);
+      --warning-border: oklch(0.72 0.11 80);
+      --success-bg: oklch(0.96 0.025 155);
+      --success-border: oklch(0.68 0.07 155);
+      --code-bg: oklch(0.95 0.007 80);
+      --focus: var(--accent);
+      --content: 72ch;
+      --toc: 220px;
+      --radius: 6px;
+      --toolbar-height: 60px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      html[data-theme="system"] {
+        --bg: oklch(0.20 0.008 80);
+        --surface: oklch(0.24 0.008 80);
+        --surface-strong: oklch(0.29 0.01 80);
+        --text: oklch(0.93 0.008 80);
+        --muted: oklch(0.73 0.012 80);
+        --border: oklch(0.37 0.012 80);
+        --accent: oklch(0.80 0.11 80);
+        --accent-soft: oklch(0.28 0.025 80);
+        --warning-bg: oklch(0.28 0.035 80);
+        --warning-border: oklch(0.55 0.08 80);
+        --success-bg: oklch(0.27 0.025 155);
+        --success-border: oklch(0.53 0.06 155);
+        --code-bg: oklch(0.24 0.008 80);
+      }
+    }
+
+    html[data-theme="dark"] {
+      --bg: oklch(0.20 0.008 80);
+      --surface: oklch(0.24 0.008 80);
+      --surface-strong: oklch(0.29 0.01 80);
+      --text: oklch(0.93 0.008 80);
+      --muted: oklch(0.73 0.012 80);
+      --border: oklch(0.37 0.012 80);
+      --accent: oklch(0.80 0.11 80);
+      --accent-soft: oklch(0.28 0.025 80);
+      --warning-bg: oklch(0.28 0.035 80);
+      --warning-border: oklch(0.55 0.08 80);
+      --success-bg: oklch(0.27 0.025 155);
+      --success-border: oklch(0.53 0.06 155);
+      --code-bg: oklch(0.24 0.008 80);
+    }
+
+    html[data-theme="light"] { color-scheme: light; }
+    html[data-theme="dark"] { color-scheme: dark; }
+
+    /* SEMANTIC_COLORS */
+
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+
+    html {
+      scroll-behavior: smooth;
+      background: var(--bg);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 16px;
+      line-height: 1.65;
+      text-rendering: optimizeLegibility;
+    }
+
+    button, select { font: inherit; }
+    h2, h3, [id] { scroll-margin-top: calc(var(--toolbar-height) + 24px); }
+    p, li, dd, h1, h2, h3, a { overflow-wrap: anywhere; }
+
+    .skip-link {
+      position: fixed;
+      top: 8px;
+      left: 12px;
+      z-index: 30;
+      padding: 8px 12px;
+      background: var(--bg);
+      transform: translateY(-150%);
+    }
+    .skip-link:focus { transform: translateY(0); }
+
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    a {
+      color: var(--accent);
+      text-decoration-thickness: 1px;
+      text-underline-offset: 0.18em;
+    }
+
+    a:hover { text-decoration-thickness: 2px; }
+
+    :focus-visible {
+      outline: 3px solid var(--focus);
+      outline-offset: 3px;
+      border-radius: 4px;
+    }
+
+    .toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+    }
+
+    .toolbar-inner {
+      max-width: calc(var(--content) + var(--toc) + 64px);
+      min-height: 60px;
+      margin: 0 auto;
+      padding: 8px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .toolbar-title {
+      color: var(--text);
+      font-size: 0.84rem;
+      font-weight: 650;
+      letter-spacing: 0.06em;
+      white-space: nowrap;
+    }
+
+    .toolbar-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-left: auto;
+    }
+
+    .version-slot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .version-slot:empty { display: none; }
+    .version-slot label { color: var(--muted); font-size: 0.84rem; }
+
+    .control, .theme-select, .version-slot select {
+      min-height: 40px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      color: var(--text);
+      padding: 6px 10px;
+      font-size: 0.84rem;
+      max-width: 100%;
+    }
+
+    .control { cursor: pointer; }
+    .control:hover, .theme-select:hover, .version-slot select:hover { background: var(--surface-strong); }
+    .reading-depth { display: flex; gap: 4px; }
+    .control[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+
+    .layout {
+      max-width: calc(var(--content) + var(--toc) + 64px);
+      margin: 0 auto;
+      padding: 52px 20px 88px;
+      display: grid;
+      grid-template-columns: minmax(0, var(--content));
+      gap: 48px;
+      justify-content: center;
+      align-items: start;
+    }
+
+    .layout.has-toc { grid-template-columns: minmax(0, var(--content)) var(--toc); }
+
+    main { min-width: 0; }
+
+    .plan-header {
+      padding-bottom: 32px;
+      margin-bottom: 40px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .eyebrow {
+      margin: 0 0 8px;
+      color: var(--accent);
+      font-size: 0.78rem;
+      font-weight: 750;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    h1, h2, h3, h4 {
+      line-height: 1.22;
+      letter-spacing: -0.018em;
+      text-wrap: balance;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 2.6rem;
+      letter-spacing: -0.035em;
+    }
+
+    .lede {
+      max-width: 68ch;
+      margin: 14px 0 0;
+      color: var(--muted);
+      font-size: 1.08rem;
+      line-height: 1.6;
+    }
+
+    section { margin: 0 0 48px; }
+
+    h2 {
+      margin: 0 0 16px;
+      padding-top: 10px;
+      font-size: 1.55rem;
+    }
+
+    h3 {
+      margin: 28px 0 10px;
+      font-size: 1.12rem;
+    }
+
+    h4 { margin: 22px 0 8px; font-size: 1rem; }
+
+    p, ul, ol, dl, blockquote, pre, table, details { margin-top: 0; margin-bottom: 18px; }
+    p:last-child, ul:last-child, ol:last-child, dl:last-child, pre:last-child, table:last-child, details:last-child { margin-bottom: 0; }
+
+    ul, ol { padding-left: 1.35rem; }
+    li + li { margin-top: 0.42rem; }
+    li > p { margin-bottom: 0.55rem; }
+
+    .steps {
+      padding-left: 1.45rem;
+    }
+
+    .steps > li {
+      padding-left: 0.35rem;
+      margin-bottom: 24px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+    }
+    .steps > li:last-child { border-bottom: 0; padding-bottom: 0; }
+    .steps > li::marker { color: var(--accent); font-weight: 700; }
+
+    .steps > li > h3:first-child {
+      margin-top: 0;
+    }
+
+    code, kbd {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.9em;
+    }
+
+    :not(pre) > code, kbd {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 0.12em 0.34em;
+    }
+
+    pre {
+      max-width: 100%;
+      overflow-x: auto;
+      padding: 15px 17px;
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      line-height: 1.55;
+    }
+
+    pre code {
+      font-size: 0.88rem;
+    }
+
+    blockquote {
+      margin-left: 0;
+      padding: 2px 0 2px 18px;
+      border-left: 1px solid var(--border);
+      color: var(--muted);
+    }
+
+    .callout {
+      margin: 20px 0;
+      padding: 14px 16px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--accent-soft);
+    }
+
+    .callout.warning {
+      background: var(--warning-bg);
+      border-color: var(--warning-border);
+    }
+
+    .callout.success {
+      background: var(--success-bg);
+      border-color: var(--success-border);
+    }
+
+    .callout.decision { background: var(--frontend-background); border-color: var(--frontend-border); }
+    .callout.error { background: var(--security-background); border-color: var(--security-border); }
+
+    .semantic {
+      --role-background: var(--external-background);
+      --role-border: var(--external-border);
+      --role-text: var(--external-text);
+      display: inline-block;
+      padding: 0.08em 0.45em;
+      border: 1px solid var(--role-border);
+      border-radius: 4px;
+      background: var(--role-background);
+      color: var(--role-text);
+      font-size: 0.88em;
+      line-height: 1.5;
+      vertical-align: baseline;
+    }
+
+    .facts {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px 28px;
+    }
+
+    .facts > div {
+      padding: 10px 0;
+      border-top: 1px solid var(--border);
+    }
+
+    .facts dt {
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .facts dd { margin: 4px 0 0; }
+
+    details {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+    }
+
+    summary {
+      cursor: pointer;
+      padding: 12px 15px;
+      font-weight: 650;
+    }
+
+    summary:hover { background: var(--surface-strong); }
+    details[open] > summary { border-bottom: 1px solid var(--border); }
+    details > :not(summary) { margin-left: 15px; margin-right: 15px; }
+    details > :nth-child(2) { margin-top: 15px; }
+    details > :last-child { margin-bottom: 15px; }
+
+    .table-wrap { max-width: 100%; overflow-x: auto; margin-bottom: 18px; }
+    .table-wrap:last-child { margin-bottom: 0; }
+    .table-wrap table { margin-bottom: 0; }
+    figure { margin: 24px 0; }
+    figure svg { display: block; max-width: 100%; height: auto; }
+    figcaption { margin-top: 10px; color: var(--muted); font-size: 0.86rem; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.94rem;
+    }
+
+    th, td {
+      padding: 9px 11px;
+      border: 1px solid var(--border);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th { background: var(--surface); font-weight: 700; }
+
+    .toc {
+      position: sticky;
+      top: calc(var(--toolbar-height) + 24px);
+      max-height: calc(100dvh - var(--toolbar-height) - 48px);
+      overflow-y: auto;
+      font-size: 0.86rem;
+    }
+
+    .toc-title {
+      margin: 0 0 9px;
+      color: var(--muted);
+      font-size: 0.75rem;
+      font-weight: 750;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .toc ul {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .toc li + li { margin-top: 4px; }
+    .toc .toc-h3 { padding-left: 12px; }
+
+    .toc a {
+      display: block;
+      padding: 7px 9px;
+      color: var(--muted);
+      text-decoration: none;
+      line-height: 1.35;
+    }
+
+    .toc a:hover { color: var(--text); }
+    .toc a[aria-current="location"], .mobile-toc a[aria-current="location"] {
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-weight: 650;
+      border-radius: 4px;
+    }
+
+    .mobile-toc { display: none; }
+
+    @media (max-width: 900px) {
+      .layout, .layout.has-toc {
+        grid-template-columns: minmax(0, var(--content));
+        gap: 0;
+        padding-top: 28px;
+      }
+
+      .toc { display: none; }
+
+      .mobile-toc {
+        display: block;
+        margin-bottom: 32px;
+      }
+
+      .mobile-toc details { margin: 0; }
+      .mobile-toc nav { padding: 12px 15px 15px; }
+      .mobile-toc ul { margin: 0; padding: 0; list-style: none; }
+      .mobile-toc .toc-h3 { padding-left: 16px; }
+      .mobile-toc a { display: block; padding: 8px 10px; text-decoration: none; }
+    }
+
+    @media (max-width: 620px) {
+      body { font-size: 15px; }
+      .toolbar-inner { gap: 8px; padding: 8px 16px; }
+      .layout { padding: 24px 16px 56px; }
+      .facts { grid-template-columns: 1fr; }
+      h1 { font-size: 2rem; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#plan-content">Skip to plan</a>
+  <div class="toolbar">
+    <div class="toolbar-inner">
+      <div class="toolbar-title">LUKR / PLAN</div>
+      <div class="toolbar-actions">
+        <div class="version-slot" id="lukr-version-slot"><!-- LUKR_VERSION_SELECTOR --></div>
+        <div class="reading-depth" id="reading-depth" role="group" aria-label="Reading depth" hidden>
+          <button class="control" id="collapse-all" type="button" aria-controls="plan-content" aria-pressed="false">Overview</button>
+          <button class="control" id="expand-all" type="button" aria-controls="plan-content" aria-pressed="false">Full detail</button>
+        </div>
+        <label>
+          <span class="visually-hidden">Theme</span>
+          <select class="theme-select" id="theme-select" aria-label="Theme">
+            <option value="system">System</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <div class="layout">
+    <main id="plan-content" tabindex="-1">
+      <div class="mobile-toc" id="mobile-toc" hidden>
+        <details>
+          <summary>Contents</summary>
+          <nav aria-label="Table of contents"></nav>
+        </details>
+      </div>
+
+<!-- PLAN_CONTENT -->
+    </main>
+
+    <aside class="toc" id="desktop-toc" aria-label="Table of contents" hidden>
+      <p class="toc-title">Contents</p>
+      <nav aria-label="Table of contents"></nav>
+    </aside>
+  </div>
+
+  <script>
+    (() => {
+      const root = document.documentElement;
+      const theme = document.getElementById('theme-select');
+      let saved = null;
+      try { saved = localStorage.getItem('plan-theme'); } catch {}
+      const initial = ['system', 'light', 'dark'].includes(saved) ? saved : 'system';
+      root.dataset.theme = initial;
+      theme.value = initial;
+      theme.addEventListener('change', () => {
+        root.dataset.theme = theme.value;
+        try { localStorage.setItem('plan-theme', theme.value); } catch {}
+      });
+
+      const slugify = (text) => text
+        .toLowerCase()
+        .trim()
+        .replace(/[^\p{L}\p{N}\s-]/gu, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-') || 'section';
+
+      const headings = [...document.querySelectorAll('#plan-content h2, #plan-content h3')];
+      const used = new Set([...document.querySelectorAll('[id]')].map(el => el.id));
+
+      headings.forEach((heading) => {
+        if (!heading.id) {
+          const base = slugify(heading.textContent || 'section');
+          let id = base;
+          let n = 2;
+          while (used.has(id)) id = `${base}-${n++}`;
+          heading.id = id;
+          used.add(id);
+        }
+      });
+
+      const buildToc = () => {
+        if (!headings.length) return null;
+        const ul = document.createElement('ul');
+        headings.forEach((heading) => {
+          const li = document.createElement('li');
+          li.className = heading.tagName === 'H3' ? 'toc-h3' : 'toc-h2';
+          const a = document.createElement('a');
+          a.href = `#${encodeURIComponent(heading.id)}`;
+          a.textContent = heading.textContent;
+          li.appendChild(a);
+          ul.appendChild(li);
+        });
+        return ul;
+      };
+
+      const desktop = document.getElementById('desktop-toc');
+      const mobile = document.getElementById('mobile-toc');
+      const hasToc = headings.filter(heading => heading.tagName === 'H2').length >= 3;
+      if (hasToc) {
+        desktop.querySelector('nav').appendChild(buildToc());
+        mobile.querySelector('nav').appendChild(buildToc());
+        desktop.hidden = false;
+        mobile.hidden = false;
+        document.querySelector('.layout').classList.add('has-toc');
+      }
+
+      const toolbar = document.querySelector('.toolbar');
+      const links = [...document.querySelectorAll('#desktop-toc a, #mobile-toc a')];
+      const linkTargets = new Map(links.map(link => [link, decodeURIComponent(link.hash.slice(1))]));
+      let toolbarHeight = toolbar.getBoundingClientRect().height;
+      let pending = false;
+
+      const updatePosition = () => {
+        pending = false;
+        toolbarHeight = toolbar.getBoundingClientRect().height;
+        root.style.setProperty('--toolbar-height', `${toolbarHeight}px`);
+        const visible = headings.filter(heading => heading.getClientRects().length);
+        let current = visible[0];
+        for (const heading of visible) {
+          if (heading.getBoundingClientRect().top <= toolbarHeight + 32) current = heading;
+        }
+        links.forEach(link => {
+          if (linkTargets.get(link) === current?.id) link.setAttribute('aria-current', 'location');
+          else link.removeAttribute('aria-current');
+        });
+      };
+
+      const schedulePosition = () => {
+        if (!pending) {
+          pending = true;
+          requestAnimationFrame(updatePosition);
+        }
+      };
+
+      const reveal = (target) => {
+        for (let ancestor = target.parentElement; ancestor; ancestor = ancestor.parentElement) {
+          if (ancestor.tagName === 'DETAILS') ancestor.open = true;
+        }
+      };
+
+      const goTo = (target, focus = false) => {
+        reveal(target);
+        mobile.querySelector('details').open = false;
+        requestAnimationFrame(() => {
+          updatePosition();
+          if (focus) {
+            target.setAttribute('tabindex', '-1');
+            target.focus({ preventScroll: true });
+          }
+          target.scrollIntoView({ block: 'start' });
+          schedulePosition();
+        });
+      };
+
+      links.forEach(link => link.addEventListener('click', event => {
+        if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+        const target = document.getElementById(linkTargets.get(link));
+        if (!target) return;
+        event.preventDefault();
+        if (location.hash !== link.hash) history.pushState(null, '', link.hash);
+        goTo(target, true);
+      }));
+
+      const followHash = () => {
+        let id;
+        try { id = decodeURIComponent(location.hash.slice(1)); } catch { return; }
+        const target = document.getElementById(id);
+        if (target && document.getElementById('plan-content').contains(target)) goTo(target);
+      };
+
+      window.addEventListener('hashchange', followHash);
+      window.addEventListener('scroll', schedulePosition, { passive: true });
+      window.addEventListener('resize', schedulePosition);
+      document.getElementById('plan-content').addEventListener('toggle', schedulePosition, true);
+      if ('ResizeObserver' in window) new ResizeObserver(schedulePosition).observe(toolbar);
+      updatePosition();
+      followHash();
+
+      const disclosures = [...document.querySelectorAll('#plan-content details')].filter(
+        el => !el.closest('.mobile-toc')
+      );
+      const expand = document.getElementById('expand-all');
+      const collapse = document.getElementById('collapse-all');
+
+      if (disclosures.length) {
+        document.getElementById('reading-depth').hidden = false;
+        const syncDepth = () => {
+          expand.setAttribute('aria-pressed', String(disclosures.every(el => el.open)));
+          collapse.setAttribute('aria-pressed', String(disclosures.every(el => !el.open)));
+        };
+        expand.addEventListener('click', () => {
+          disclosures.forEach(el => { el.open = true; });
+          syncDepth();
+        });
+        collapse.addEventListener('click', () => {
+          disclosures.forEach(el => { el.open = false; });
+          syncDepth();
+        });
+        disclosures.forEach(el => el.addEventListener('toggle', syncDepth));
+        syncDepth();
+      }
+
+      document.querySelectorAll('table').forEach((table) => {
+        if (table.parentElement?.classList.contains('table-wrap')) return;
+        const wrap = document.createElement('div');
+        wrap.className = 'table-wrap';
+        wrap.tabIndex = 0;
+        wrap.setAttribute('role', 'region');
+        wrap.setAttribute('aria-label', table.caption?.textContent.trim() || 'Table, scroll horizontally if needed');
+        table.parentNode.insertBefore(wrap, table);
+        wrap.appendChild(table);
+      });
+
+      const title = document.querySelector('#plan-content h1');
+      if (title?.textContent.trim()) document.title = `${title.textContent.trim()} | Lukr`;
+    })();
+  </script>
+</body>
+</html>

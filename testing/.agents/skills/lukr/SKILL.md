@@ -15,8 +15,6 @@ Use this skill when the user wants to publish a plan, revise a plan in Lukr, or 
 4. Publish the rendered document as the `html` field, with the plan title as `name`. For a revision, use `POST /plans/:id` to keep its history. Do not publish the fragment or a document that still contains the `PLAN_CONTENT` marker. The reserved `LUKR_VERSION_SELECTOR` marker should remain for server integration.
 5. Return the exact versioned URL from the save response as described below.
 
-Lukr renders Mermaid source blocks into embedded light/dark SVGs before storing the complete document. A `422` response identifies an invalid diagram; use its `diagram` number and error detail to repair the source through `lukr-plan`, then retry. A `503` response indicates renderer availability problems; report it rather than removing the diagram or claiming success. Failed rendering does not create a plan or consume a version.
-
 Listing and retrieving plans do not require `lukr-plan`. Do not regenerate or republish a plan when the user only asks to read it.
 
 ## Publishing and API rules
